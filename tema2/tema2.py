@@ -87,20 +87,29 @@ def main_bonus():
     dU = dUR.copy()
 
     L_flat = np.zeros(n * (n + 1) // 2)
-    U_flat = np.zeros(n * (n + 1) // 2)
+    U_flat_size = (n - 1) * n // 2
+    U_flat = np.zeros(U_flat_size)
 
     for p in range(n):
         for i in range(p + 1):
             idx_L = p * (p + 1) // 2 + i
-            sum_L = sum(L_flat[p * (p + 1) // 2 + k] * U_flat[k * (k + 1) // 2 + i] for k in range(i))
+            sum_L = 0.0
+            for k in range(i):
+                # Calculate index for U_flat[k, i]
+                idx_U_k_i = (k * (2*(n-1) - k +1)) // 2 + (i - k -1)
+                sum_L += L_flat[p * (p + 1) // 2 + k] * U_flat[idx_U_k_i]
             if np.abs(dU[i]) < epsilon:
                 print("Nu se poate calcula LU: diviziune cu zero în L la i={}".format(i))
                 return
             L_flat[idx_L] = (A_init[p, i] - sum_L) / dU[i]
 
-        for j in range(p, n):
-            idx_U = p * (n - p) + j - p
-            sum_U = sum(L_flat[p * (p + 1) // 2 + k] * U_flat[k * (n - k) + j - k] for k in range(p))
+        for j in range(p + 1, n):
+            idx_U = (p * (2*(n-1) - p +1)) // 2 + (j - p -1)
+            sum_U = 0.0
+            for k in range(p):
+                # Calculate index for U_flat[k, j]
+                idx_U_k_j = (k * (2*(n-1) - k +1)) // 2 + (j - k -1)
+                sum_U += L_flat[p * (p + 1) // 2 + k] * U_flat[idx_U_k_j]
             if np.abs(L_flat[p * (p + 1) // 2 + p]) < epsilon:
                 print("Nu se poate calcula LU: diviziune cu zero în U la p={}, j={}".format(p, j))
                 return
@@ -114,27 +123,32 @@ def main_bonus():
 
     x = np.zeros(n)
     for i in range(n - 1, -1, -1):
-        idx = i * (n - i)
-        sum_ux = sum(U_flat[idx + j - i] * x[j] for j in range(i + 1, n))
+        sum_ux = 0.0
+        for j in range(i + 1, n):
+            idx_U = (i * (2*(n-1) - i +1)) // 2 + (j - i -1)
+            sum_ux += U_flat[idx_U] * x[j]
         x[i] = (y[i] - sum_ux) / dU[i]
 
-    LU = np.zeros((n, n))
+    # Reconstruct L and U matrices
+    L = np.zeros((n, n))
     for i in range(n):
-        for j in range(n):
-            if j >= i:
-                idx = i * (n - i) + j - i
-                LU[i, j] = U_flat[idx]
-            else:
-                idx = i * (i + 1) // 2 + j
-                LU[i, j] = L_flat[idx]
-    LU_diag = np.diag(dU)
-    LU = LU @ LU_diag
+        for j in range(i + 1):
+            idx = i * (i + 1) // 2 + j
+            L[i, j] = L_flat[idx]
+
+    U = np.zeros((n, n))
+    for i in range(n):
+        U[i, i] = dU[i]
+        for j in range(i + 1, n):
+            idx = (i * (2*(n-1) - i +1)) // 2 + (j - i -1)
+            U[i, j] = U_flat[idx]
+
+    LU = L @ U
 
     print("xLU (bonus):", x)
     print("Matricea LU (bonus):\n", LU)
     print("Matricea A originală:\n", A_init)
     print("Eroarea ||A - LU||_2:", (np.linalg.norm(A_init - LU, 2)))
-
 
 if __name__ == "__main__":
     main()
