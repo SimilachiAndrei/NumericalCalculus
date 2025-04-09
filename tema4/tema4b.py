@@ -23,13 +23,16 @@ def initial_guess(A):
 
 
 # ----------- Metode iterative -----------
+import numpy as np
+
+
 def method_schultz(A, eps=1e-6, kmax=10000):
     n = A.shape[0]
     V = initial_guess(A)
     k = 0
     while k < kmax:
         AV = A @ V
-        # Construim 2I - AV
+        # Construim 2I - AV prin ajustare diagonală
         C = -AV.copy()
         np.fill_diagonal(C, 2 + (-AV.diagonal()))  # 2I - AV = -AV + 2I
         V_next = V @ C
@@ -44,24 +47,29 @@ def method_schultz(A, eps=1e-6, kmax=10000):
 
 def method_Li_LI1(A, eps=1e-6, kmax=10000):
     n = A.shape[0]
+    I = np.eye(n)
     V = initial_guess(A)
     k = 0
     while k < kmax:
         AV = A @ V
-        # Construim 3I - AV
-        C1 = -AV.copy()
-        np.fill_diagonal(C1, 3 + (-AV.diagonal()))
-        # Construim 3I - AV (a doua apariție, aceeași matrice)
-        C2 = C1.copy()  # Reutilizare, deoarece AV nu s-a schimbat
-        term = C1 @ C2  # (3I - AV)^2
-        V_next = V @ term
+
+        # Compute 3I - AV
+        inner_term = -AV.copy()
+        np.fill_diagonal(inner_term, inner_term.diagonal() + 3)  # 3I - AV
+
+        # Compute 3I - AV@inner_term
+        AV_inner = AV @ inner_term
+        outer_term = -AV_inner
+        np.fill_diagonal(outer_term, outer_term.diagonal() + 3)
+        V_next = V @ outer_term
         delta = norm_diff(V_next, V)
         k += 1
         if delta < eps:
             break
         V = V_next
-    residual = norm_inf(np.eye(n) - A @ V)
-    return V, k, residual
+    residual = norm_inf(I - A @ V_next)
+    return V_next, k, residual
+
 
 
 def method_Li_LI2(A, eps=1e-6, kmax=10000):
@@ -71,23 +79,20 @@ def method_Li_LI2(A, eps=1e-6, kmax=10000):
     k = 0
     while k < kmax:
         VA = V @ A
-        # Termenul (I - VA)
-        term1 = I - VA
 
-        # Termenul (3I - VA) - prima apariție
-        C1 = -VA.copy()
-        np.fill_diagonal(C1, 3 + (-VA.diagonal()))
+        # Compute (I - VA)
+        I_minus_VA = -VA.copy()
+        np.fill_diagonal(I_minus_VA, I_minus_VA.diagonal() + 1)
 
-        # Termenul (3I - VA) - a doua apariție
-        C2 = C1.copy()
+        # Compute (3I - VA)
+        threeI_minus_VA = -VA.copy()
+        np.fill_diagonal(threeI_minus_VA, threeI_minus_VA.diagonal() + 3)
 
-        # Calculăm (3I - VA)^2
-        term2 = C1 @ C2
+        # Multiply terms
+        temp = threeI_minus_VA @ threeI_minus_VA  # (3I-VA)Â² first
+        term = I_minus_VA @ temp
 
-        # Calculăm termenul total: (I - VA) @ (3I - VA)^2
-        combined_term = term1 @ term2
-
-        V_next = (I + 0.25 * combined_term) @ V
+        V_next = (I + 0.25 * term) @ V
         delta = norm_diff(V_next, V)
         k += 1
         if delta < eps:
@@ -122,7 +127,13 @@ def bonus_pseudoinverse(A, eps=1e-6, kmax=10000):
     V = A.T / (np.max(np.sum(np.abs(A), axis=0)) * norm_inf(A))
     k = 0
     while k < kmax:
-        V_next = V @ (2 * I_m - A @ V)
+        AV = A @ V  # Precompute once (most expensive operation)
+
+        # Compute (2I - AV)
+        twoI_minus_AV = -AV.copy()  # Start with -AV
+        np.fill_diagonal(twoI_minus_AV, twoI_minus_AV.diagonal() + 2)  # Add 2 to diagonal
+
+        V_next = V @ twoI_minus_AV
         delta = norm_diff(V_next, V)
         k += 1
         if delta < eps:
@@ -145,24 +156,24 @@ if __name__ == "__main__":
     eps = 1e-6
     kmax = 10000
 
-    # print("\n" + "=" * 50)
-    # print("Testare metode iterative pe matrice generică:")
-    # print("Matricea A:\n", A)
-    #
-    # # Metoda Schultz
-    # V_schultz, k_schultz, res_schultz = method_schultz(A, eps, kmax)
-    # print("\nMetoda Schultz:")
-    # print(f"Iterații: {k_schultz}, Rezidual: {res_schultz:.4e}")
-    #
-    # # Metoda Li & Li (1)
-    # V_li1, k_li1, res_li1 = method_Li_LI1(A, eps, kmax)
-    # print("\nMetoda Li & Li (1):")
-    # print(f"Iterații: {k_li1}, Rezidual: {res_li1:.4e}")
-    #
-    # # Metoda Li & Li (2)
-    # V_li2, k_li2, res_li2 = method_Li_LI2(A, eps, kmax)
-    # print("\nMetoda Li & Li (2):")
-    # print(f"Iterații: {k_li2}, Rezidual: {res_li2:.4e}")
+    print("\n" + "=" * 50)
+    print("Testare metode iterative pe matrice generică:")
+    print("Matricea A:\n", A)
+
+    # Metoda Schultz
+    V_schultz, k_schultz, res_schultz = method_schultz(A, eps, kmax)
+    print("\nMetoda Schultz:")
+    print(f"Iterații: {k_schultz}, Rezidual: {res_schultz:.4e}")
+
+    # Metoda Li & Li (1)
+    V_li1, k_li1, res_li1 = method_Li_LI1(A, eps, kmax)
+    print("\nMetoda Li & Li (1):")
+    print(f"Iterații: {k_li1}, Rezidual: {res_li1:.4e}")
+
+    # Metoda Li & Li (2)
+    V_li2, k_li2, res_li2 = method_Li_LI2(A, eps, kmax)
+    print("\nMetoda Li & Li (2):")
+    print(f"Iterații: {k_li2}, Rezidual: {res_li2:.4e}")
 
     # -------------------------------
     # Partea 3: Matricea specială
