@@ -25,34 +25,43 @@ def initial_guess(A):
 # ----------- Metode iterative -----------
 def method_schultz(A, eps=1e-6, kmax=10000):
     n = A.shape[0]
-    I = np.eye(n)
     V = initial_guess(A)
     k = 0
     while k < kmax:
-        V_next = V @ (2 * I - A @ V)
+        AV = A @ V
+        # Construim 2I - AV
+        C = -AV.copy()
+        np.fill_diagonal(C, 2 + (-AV.diagonal()))  # 2I - AV = -AV + 2I
+        V_next = V @ C
         delta = norm_diff(V_next, V)
         k += 1
         if delta < eps:
             break
         V = V_next
-    residual = norm_inf(I - A @ V_next)
-    return V_next, k, residual
+    residual = norm_inf(np.eye(n) - A @ V)
+    return V, k, residual
 
 
 def method_Li_LI1(A, eps=1e-6, kmax=10000):
     n = A.shape[0]
-    I = np.eye(n)
     V = initial_guess(A)
     k = 0
     while k < kmax:
-        V_next = V @ (3 * I - A @ V @ (3 * I - A @ V))
+        AV = A @ V
+        # Construim 3I - AV
+        C1 = -AV.copy()
+        np.fill_diagonal(C1, 3 + (-AV.diagonal()))
+        # Construim 3I - AV (a doua apariție, aceeași matrice)
+        C2 = C1.copy()  # Reutilizare, deoarece AV nu s-a schimbat
+        term = C1 @ C2  # (3I - AV)^2
+        V_next = V @ term
         delta = norm_diff(V_next, V)
         k += 1
         if delta < eps:
             break
         V = V_next
-    residual = norm_inf(I - A @ V_next)
-    return V_next, k, residual
+    residual = norm_inf(np.eye(n) - A @ V)
+    return V, k, residual
 
 
 def method_Li_LI2(A, eps=1e-6, kmax=10000):
@@ -61,15 +70,31 @@ def method_Li_LI2(A, eps=1e-6, kmax=10000):
     V = initial_guess(A)
     k = 0
     while k < kmax:
-        term = (I - V @ A) @ (3 * I - V @ A) @ (3 * I - V @ A)
-        V_next = (I + 0.25 * term) @ V
+        VA = V @ A
+        # Termenul (I - VA)
+        term1 = I - VA
+
+        # Termenul (3I - VA) - prima apariție
+        C1 = -VA.copy()
+        np.fill_diagonal(C1, 3 + (-VA.diagonal()))
+
+        # Termenul (3I - VA) - a doua apariție
+        C2 = C1.copy()
+
+        # Calculăm (3I - VA)^2
+        term2 = C1 @ C2
+
+        # Calculăm termenul total: (I - VA) @ (3I - VA)^2
+        combined_term = term1 @ term2
+
+        V_next = (I + 0.25 * combined_term) @ V
         delta = norm_diff(V_next, V)
         k += 1
         if delta < eps:
             break
         V = V_next
-    residual = norm_inf(I - A @ V_next)
-    return V_next, k, residual
+    residual = norm_inf(np.eye(n) - A @ V)
+    return V, k, residual
 
 
 # ----------- Partea 3: Matricea specială -----------
@@ -120,24 +145,24 @@ if __name__ == "__main__":
     eps = 1e-6
     kmax = 10000
 
-    print("\n" + "=" * 50)
-    print("Testare metode iterative pe matrice generică:")
-    print("Matricea A:\n", A)
-
-    # Metoda Schultz
-    V_schultz, k_schultz, res_schultz = method_schultz(A, eps, kmax)
-    print("\nMetoda Schultz:")
-    print(f"Iterații: {k_schultz}, Rezidual: {res_schultz:.4e}")
-
-    # Metoda Li & Li (1)
-    V_li1, k_li1, res_li1 = method_Li_LI1(A, eps, kmax)
-    print("\nMetoda Li & Li (1):")
-    print(f"Iterații: {k_li1}, Rezidual: {res_li1:.4e}")
-
-    # Metoda Li & Li (2)
-    V_li2, k_li2, res_li2 = method_Li_LI2(A, eps, kmax)
-    print("\nMetoda Li & Li (2):")
-    print(f"Iterații: {k_li2}, Rezidual: {res_li2:.4e}")
+    # print("\n" + "=" * 50)
+    # print("Testare metode iterative pe matrice generică:")
+    # print("Matricea A:\n", A)
+    #
+    # # Metoda Schultz
+    # V_schultz, k_schultz, res_schultz = method_schultz(A, eps, kmax)
+    # print("\nMetoda Schultz:")
+    # print(f"Iterații: {k_schultz}, Rezidual: {res_schultz:.4e}")
+    #
+    # # Metoda Li & Li (1)
+    # V_li1, k_li1, res_li1 = method_Li_LI1(A, eps, kmax)
+    # print("\nMetoda Li & Li (1):")
+    # print(f"Iterații: {k_li1}, Rezidual: {res_li1:.4e}")
+    #
+    # # Metoda Li & Li (2)
+    # V_li2, k_li2, res_li2 = method_Li_LI2(A, eps, kmax)
+    # print("\nMetoda Li & Li (2):")
+    # print(f"Iterații: {k_li2}, Rezidual: {res_li2:.4e}")
 
     # -------------------------------
     # Partea 3: Matricea specială
