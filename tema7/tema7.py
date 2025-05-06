@@ -52,10 +52,62 @@ def halley(x0):
         x_new = x - delta
 
         if abs(delta) < epsilon:  # Convergență
-            return round(x_new, int(-math.log10(epsilon)) + 1)
+            return x_new  # Returnăm valoarea nerotunjită pentru comparații
         x = x_new
 
     return None  # Divergență
+
+
+# ------------------- BONUS: Metode N⁴ și N⁵ din articol -------------------
+def method_N4(x0):
+    x = x0
+    for _ in range(kmax):
+        fx = horner(coeffs, x)
+        fp = horner(coeffs_p, x)
+        if abs(fp) < epsilon:
+            return None
+
+        y = x - fx / fp
+        fy = horner(coeffs, y)
+
+        numerator = fx ** 2 + fy ** 2
+        denominator = fp * (fx - fy)
+        if abs(denominator) < epsilon:
+            return None
+
+        x_new = x - numerator / denominator
+        if abs(x_new - x) < epsilon:
+            return x_new
+        x = x_new
+    return None
+
+
+def method_N5(x0):
+    x = x0
+    for _ in range(kmax):
+        fx = horner(coeffs, x)
+        fp = horner(coeffs_p, x)
+        if abs(fp) < epsilon:
+            return None
+
+        y = x - fx / fp
+        fy = horner(coeffs, y)
+
+        # Calcul pas N⁴
+        numerator_N4 = fx ** 2 + fy ** 2
+        denominator_N4 = fp * (fx - fy)
+        if abs(denominator_N4) < epsilon:
+            return None
+        z = x - numerator_N4 / denominator_N4
+
+        # Pas suplimentar N⁵
+        fz = horner(coeffs, z)
+        x_new = z - fz / fp
+
+        if abs(x_new - x) < epsilon:
+            return x_new
+        x = x_new
+    return None
 
 
 # 5. Generare puncte de start în interval
@@ -63,17 +115,34 @@ start_points = [-R + i * (2 * R) / (num_start_points - 1) for i in range(num_sta
 print(f"3. Puncte de start generate (n={num_start_points}):")
 print("   ", [round(x, 2) for x in start_points], "\n")
 
-# 6. Căutare rădăcini distincte
-roots = []
-for x0 in start_points:
-    root = halley(x0)
-    if root is not None:
-        # Verificare unicitate
-        is_unique = all(abs(root - r) > epsilon for r in roots)
-        if is_unique:
-            roots.append(root)
-            print(f"4. Punct start {x0:.2f} → Rădăcină: {root:.6f}")
+
+# 6. Căutare rădăcini distincte cu toate metodele
+def find_roots(method):
+    roots = []
+    for x0 in start_points:
+        root = method(x0)
+        if root is not None:
+            # Verificare unicitate cu valori nerotunjite
+            is_unique = all(abs(root - r) > epsilon for r in roots)
+            if is_unique:
+                roots.append(root)
+    return roots
+
+
+# Aplicăm toate metodele
+halley_roots = find_roots(halley)
+n4_roots = find_roots(method_N4)
+n5_roots = find_roots(method_N5)
+
+# Combinăm și eliminăm duplicate între metode
+all_roots = []
+for r in halley_roots + n4_roots + n5_roots:
+    if all(abs(r - existing) > epsilon for existing in all_roots):
+        all_roots.append(r)
+
+# Rotunjire finală pentru afișare
+final_roots = [round(root, int(-math.log10(epsilon)) + 1) for root in all_roots]
 
 # 7. Afișare rezultate finale
-print("\n5. Rezultate finale:")
-print("   Rădăcini reale distincte:", sorted(roots))
+print("\n5. Rezultate finale (Halley, N⁴, N⁵):")
+print("   Rădăcini reale distincte:", sorted(final_roots))
