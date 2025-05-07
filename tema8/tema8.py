@@ -4,7 +4,7 @@ import numpy as np
 # =============================================================================
 # Utilitare generale (gradient descendent + backtracking)
 # =============================================================================
-def gradient_descent(F, grad_func, x0, eta, epsilon=1e-5, kmax=30000, backtracking=False, beta=0.8):
+def gradient_descent(F, grad_func, x0, lr, epsilon=1e-5, kmax=30000, backtracking=False, beta=0.8):
     x = x0.copy()
     history = []
     for k in range(kmax):
@@ -12,20 +12,20 @@ def gradient_descent(F, grad_func, x0, eta, epsilon=1e-5, kmax=30000, backtracki
 
         # Backtracking line search
         if backtracking:
-            eta_current = 1.0
+            lr_current = 1.0
             p = 0
-            while F(x - eta_current * g) > F(x) - (eta_current / 2) * np.linalg.norm(g) ** 2 and p < 8:
-                eta_current *= beta
+            while F(x - lr_current * g) > F(x) - (lr_current / 2) * np.linalg.norm(g) ** 2 and p < 8:
+                lr_current *= beta
                 p += 1
 
-        eta_used = eta_current if backtracking else eta
-        x_new = x - eta_used * g
+        lr_used = lr_current if backtracking else lr
+        x_new = x - lr_used * g
 
         history.append({
             'iteration': k + 1,
             'x': x_new,
             'grad_norm': np.linalg.norm(g),
-            'eta': eta_used
+            'lr': lr_used
         })
 
         if np.linalg.norm(x_new - x) < epsilon:
@@ -62,11 +62,11 @@ grad_approx1 = lambda x: approx_gradient(F1, x)
 x0 = np.array([0.0, 0.0])
 
 # Rulare cu gradient aproximativ (η=0.1)
-x_min_ap1, iter_ap1, _ = gradient_descent(F1, grad_approx1, x0, eta=0.1)
+x_min_ap1, iter_ap1, _ = gradient_descent(F1, grad_approx1, x0, lr=0.1)
 print(f"Aproximativ: Minim la {x_min_ap1} în {iter_ap1} iterații (η=0.1)")
 
 # Rulare cu backtracking (β=0.8)
-x_min_bt1, iter_bt1, _ = gradient_descent(F1, grad_analytic1, x0, eta=1.0, backtracking=True)
+x_min_bt1, iter_bt1, _ = gradient_descent(F1, grad_analytic1, x0, lr=1.0, backtracking=True)
 print(f"Backtracking: Minim la {x_min_bt1} în {iter_bt1} iterații")
 
 # =============================================================================
@@ -81,11 +81,11 @@ grad_approx2 = lambda x: approx_gradient(F2, x)
 x0 = np.array([0.0, 0.0])
 
 # Rulare cu gradient aproximativ (η=0.05)
-x_min_ap2, iter_ap2, _ = gradient_descent(F2, grad_approx2, x0, eta=0.05)
+x_min_ap2, iter_ap2, _ = gradient_descent(F2, grad_approx2, x0, lr=0.05)
 print(f"Aproximativ: Minim la {x_min_ap2} în {iter_ap2} iterații (η=0.05)")
 
 # Rulare cu backtracking (β=0.8)
-x_min_bt2, iter_bt2, _ = gradient_descent(F2, grad_analytic2, x0, eta=1.0, backtracking=True)
+x_min_bt2, iter_bt2, _ = gradient_descent(F2, grad_analytic2, x0, lr=1.0, backtracking=True)
 print(f"Backtracking: Minim la {x_min_bt2} în {iter_bt2} iterații")
 
 # =============================================================================
@@ -100,11 +100,11 @@ grad_approx3 = lambda x: approx_gradient(F3, x)
 x0 = np.array([0.0, 0.0])
 
 # Rulare cu gradient aproximativ (η=0.1)
-x_min_ap3, iter_ap3, _ = gradient_descent(F3, grad_approx3, x0, eta=0.1)
+x_min_ap3, iter_ap3, _ = gradient_descent(F3, grad_approx3, x0, lr=0.1)
 print(f"Aproximativ: Minim la {x_min_ap3} în {iter_ap3} iterații (η=0.1)")
 
 # Rulare cu backtracking (β=0.8)
-x_min_bt3, iter_bt3, _ = gradient_descent(F3, grad_analytic3, x0, eta=1.0, backtracking=True)
+x_min_bt3, iter_bt3, _ = gradient_descent(F3, grad_analytic3, x0, lr=1.0, backtracking=True)
 print(f"Backtracking: Minim la {x_min_bt3} în {iter_bt3} iterații")
 
 # =============================================================================
@@ -122,9 +122,9 @@ grad_approx4 = lambda x: approx_gradient(F4, x)
 x0 = np.array([0.5, 1.0])
 
 # Rulare cu gradient aproximativ (η=0.01)
-x_min_ap4, iter_ap4, _ = gradient_descent(F4, grad_approx4, x0, eta=0.01)
+x_min_ap4, iter_ap4, _ = gradient_descent(F4, grad_approx4, x0, lr=0.01)
 print(f"Aproximativ: Minim la {x_min_ap4} în {iter_ap4} iterații (η=0.01)")
 
 # Rulare cu backtracking (β=0.8)
-x_min_bt4, iter_bt4, _ = gradient_descent(F4, grad_analytic4, x0, eta=1.0, backtracking=True)
+x_min_bt4, iter_bt4, _ = gradient_descent(F4, grad_analytic4, x0, lr=1.0, backtracking=True)
 print(f"Backtracking: Minim la {x_min_bt4} în {iter_bt4} iterații")
