@@ -132,6 +132,8 @@ def main():
     plt.ylabel('f(x)')
     plt.title('Function Approximation Comparison')
     plt.show()
+    plt.savefig('ss.png')
+
 
 
 if __name__ == "__main__":
